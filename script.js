@@ -28,7 +28,7 @@ addEventListener('load', function() {
 					if (b[i] == undefined)
 						b[i] = [];
 					for (var j = 0; j < 2; ++j) {
-						b[i][j] = ((i + j) & 1 ? -1 : 1) * 
+						b[i][j] = ((i + j) & 1 ? -1 : 1) *
 							a[1 - j][1 - i] * invDet;
 					}
 				}
@@ -91,6 +91,7 @@ addEventListener('load', function() {
 				lineWidth: 2,
 				bgColor: [255, 255, 255, 1],
 				pointColor: [0, 0, 0, 1],
+				plotColor: [0, 0, 255, 1],
 			},
 			project: function(pos, result) {
 				result = app.camera.project(pos, result);
@@ -105,19 +106,24 @@ addEventListener('load', function() {
 			_projectFn: function(pos, result) {
 				return app.drawing.project(pos, result);
 			},
-			drawElement: function(elem, bounds) {
+			drawElement: function(elem, bounds, resolution) {
 				if (bounds == undefined)
 					bounds = app.camera.getSceneBounds([0, 0], [1, 1]);
-				elem.drawAt(this.ctx, this._projectFn, bounds, this.style);
+				if (resolution == undefined)
+					resolution = Math.min(bounds[1][0] - bounds[0][0], bounds[1][1] - bounds[0][1]) /
+					             Math.max(this.width, this.height);
+				elem.drawAt(this.ctx, this._projectFn, bounds, resolution, this.style);
 			},
 			drawScene: function() {
 				this.ctx.clearRect(0, 0, this.width, this.height);
 				this.ctx.fillStyle = 'rgba(' + this.style.bgColor + ')';
 				this.ctx.fillRect(0, 0, this.width, this.height);
 				var bounds = app.camera.getSceneBounds([0, 0], [1, 1]);
+				var resolution = Math.min(bounds[1][0] - bounds[0][0], bounds[1][1] - bounds[0][1]) /
+				                 Math.max(this.width, this.height);  // approximate scene units per pixel
 				var elements = app.scene.getElements();
 				for (var i = 0; i < elements.length; ++i) {
-					this.drawElement(elements[i], bounds);
+					this.drawElement(elements[i], bounds, resolution);
 				}
 			},
 		},
@@ -126,7 +132,7 @@ addEventListener('load', function() {
 				this.pos = [x, y];
 			};
 			Point.prototype = {
-				drawAt: function(ctx, projectFn, bounds, style) {
+				drawAt: function(ctx, projectFn, bounds, resolution, style) {
 					ctx.fillStyle = 'rgba(' + style.pointColor + ')';
 					ctx.beginPath();
 					var pos = projectFn(this.pos);
@@ -136,8 +142,39 @@ addEventListener('load', function() {
 				}
 			};
 
+			var Parabola = function(a, b, c) {
+				this.a = a;
+				this.b = b;
+				this.c = c;
+			};
+			Parabola.prototype = {
+				drawAt: function(ctx, projectFn, bounds, resolution, style) {
+					ctx.strokeStyle = 'rgba(' + style.plotColor + ')';
+					ctx.lineWidth = style.lineWidth;
+					ctx.beginPath();
+					var pos = [bounds[0][0] - resolution * 10, this.func(bounds[0][0])];
+					var ctxPos = [0, 0];
+					projectFn(pos, ctxPos);
+					ctx.moveTo(ctxPos[0], ctxPos[1]);
+					while (pos[0] <= bounds[1][0]) {
+						pos[0] += resolution;
+						pos[1] = this.func(pos[0]);
+						if (pos[1] >= bounds[0][1] - resolution * 10 &&
+						    pos[1] <= bounds[1][1] + resolution * 10) {
+							projectFn(pos, ctxPos);
+							ctx.lineTo(ctxPos[0], ctxPos[1]);
+						}
+					}
+					ctx.stroke();
+				},
+				func: function(x) {
+					return this.a * x * x + this.b * x + this.c;
+				}
+			};
+
 			return {
 				Point: Point,
+				Parabola: Parabola,
 			};
 		})(),
 		scene: {
@@ -149,8 +186,7 @@ addEventListener('load', function() {
 		ui: {
 			handleClick: function(e) {
 				var pos = app.drawing.unproject(this.clientToCanvasCoords(e.clientX, e.clientY));
-				app.scene._elements.push(new app.shapes.Point(pos[0], pos[1]));
-				app.drawing.drawScene();
+				app.model.handleClick(pos);
 			},
 			clientToCanvasCoords: function(x, y) {
 				var r = app.canvas.getBoundingClientRect();
@@ -160,7 +196,31 @@ addEventListener('load', function() {
 			_clickHandler: function(e) {
 				return app.ui.handleClick(e);
 			}
-		}
+		},
+		model: {
+			points: [],
+			coefs: null,
+			handleClick: function(pos) {
+				if (this.points.length >= 3)
+					return;
+				this.points.push(pos);
+				app.scene._elements.push(new app.shapes.Point(pos[0], pos[1]));
+				if (this.points.length == 3) {
+					var coefs = this.calculateCoefficients(this.points[0], this.points[1], pos);
+					this.coefs = coefs;
+					app.scene._elements.push(new app.shapes.Parabola(coefs[0], coefs[1], coefs[2]));
+				}
+				app.drawing.drawScene();
+			},
+			calculateCoefficients: function(p1, p2, p3) {
+				// source: <url:http://fdisto.misis.ru/s/Hel/Matem/Para_3t.htm>
+				var a = (p3[1] - (p3[0] * (p2[1] - p1[1]) + p2[0] * p1[1] - p1[0] * p2[1]) / (p2[0] - p1[0])) /
+				        (p3[0] * (p3[0] - p2[0] - p1[0]) + p1[0] * p2[0]);
+				var b = (p2[1] - p1[1]) / (p2[0] - p1[0]) - a * (p1[0] + p2[0]);
+				var c = (p2[0] * p1[1] - p1[0] * p2[1]) / (p2[0] - p1[0]) + a * p1[0] * p2[0];
+				return [a, b, c];
+			},
+		},
 	};
 
 	app.canvas.width  = CANVAS_SIZE;
