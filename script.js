@@ -83,6 +83,7 @@ addEventListener('load', function() {
 			},
 		},
 		canvas: document.createElement('canvas'),
+		controlsForm: document.getElementById('controls'),
 		drawing: {
 			ctx: null,
 			width: CANVAS_SIZE,
@@ -184,6 +185,40 @@ addEventListener('load', function() {
 			},
 		},
 		ui: {
+			exposeVariables: function(vars, cb) {
+				app.controlsForm.innerHTML = '';
+				var inputs = [];
+				app.controlsForm.onsubmit = function(e) {
+					e.preventDefault();
+					for (var i = 0; i < vars.length; ++i) {
+						var v = vars[i];
+						var value = inputs[i].value;
+						if (v.validate && !v.validate(value)) {
+							alert('Invalid ' + v.name + ' value');
+							return;
+						}
+						v.value = value;
+					}
+					cb(vars);
+				}
+				for (var i = 0; i < vars.length; ++i) {
+					var v = vars[i];
+					var label = document.createElement('label');
+					var span = document.createElement('span');
+					var input = document.createElement('input');
+					input.type = 'text';
+					span.innerText = v.name;
+					input.value = v.value;
+					label.appendChild(span);
+					label.appendChild(input);
+					inputs.push(input);
+					app.controlsForm.appendChild(label);
+				}
+				var submit = document.createElement('input');
+				submit.type = 'submit';
+				submit.value = 'Redraw';
+				app.controlsForm.appendChild(submit);
+			},
 			handleClick: function(e) {
 				var pos = app.drawing.unproject(this.clientToCanvasCoords(e.clientX, e.clientY));
 				app.model.handleClick(pos);
@@ -208,7 +243,31 @@ addEventListener('load', function() {
 				if (this.points.length == 3) {
 					var coefs = this.calculateCoefficients(this.points[0], this.points[1], pos);
 					this.coefs = coefs;
-					app.scene._elements.push(new app.shapes.Parabola(coefs[0], coefs[1], coefs[2]));
+					var parabola = new app.shapes.Parabola(coefs[0], coefs[1], coefs[2]);
+					var updateParabola = function() {
+						parabola.a = coefs[0];
+						parabola.b = coefs[1];
+						parabola.c = coefs[2];
+						app.drawing.drawScene();
+					};
+					app.scene._elements.push(parabola);
+					var validate = function(x) {
+						x = +x;
+						if (isNaN(x))
+							return false;
+						return true;
+					};
+					var vars = [
+						{name: 'a', value: coefs[0], validate: validate},
+						{name: 'b', value: coefs[1], validate: validate},
+						{name: 'c', value: coefs[2], validate: validate},
+					];
+					var cb = function(vars) {
+						for (var i = 0; i < 3; ++i)
+							coefs[i] = +vars[i].value;
+						updateParabola();
+					};
+					app.ui.exposeVariables(vars, cb);
 				}
 				app.drawing.drawScene();
 			},

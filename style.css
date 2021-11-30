@@ -5,3 +5,15 @@
 canvas {
 	border: 1pt solid black;
 }
+
+#controls {
+	display: table;
+}
+
+#controls label {
+	display: table-row;
+}
+
+#controls label > * {
+	display: table-cell;
+}
