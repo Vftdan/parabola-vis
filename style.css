@@ -2,8 +2,15 @@
 	font-family: sans-serif;
 }
 
+body > * {
+	margin: 4pt;
+	display: inline-block;
+	vertical-align: top;
+}
+
 canvas {
 	border: 1pt solid black;
+	width: 640px;
 }
 
 #controls {
@@ -16,4 +23,9 @@ canvas {
 
 #controls label > * {
 	display: table-cell;
+	margin: 3pt;
+}
+
+#controls label > span {
+	text-align: right;
 }

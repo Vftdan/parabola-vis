@@ -282,7 +282,7 @@ addEventListener('load', function() {
 					var span = document.createElement('span');
 					var input = document.createElement('input');
 					input.type = 'text';
-					span.innerText = v.name;
+					span.innerText = v.name + ' = ';
 					input.value = v.value;
 					label.appendChild(span);
 					label.appendChild(input);
