@@ -244,6 +244,20 @@ addEventListener('load', function() {
 							curr += cellSize;
 						}
 					}
+
+					var pos = [0, 0];
+					pos[0] = bounds[1][0];
+					projectFn(pos, ctxPos);
+					ctx.textAlign = 'right';
+					ctx.textBaseline = 'bottom';
+					ctx.fillText('x', ctxPos[0] - 0.05 / resolution, ctxPos[1] - 0.075 / resolution);
+
+					var pos = [0, 0];
+					pos[1] = bounds[1][1];
+					projectFn(pos, ctxPos);
+					ctx.textAlign = 'left';
+					ctx.textBaseline = 'top';
+					ctx.fillText('y', ctxPos[0] + 0.05 / resolution, ctxPos[1] + 0.075 / resolution);
 				}
 			};
 
