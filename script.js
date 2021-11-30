@@ -1,7 +1,7 @@
 var app = null;
 
 addEventListener('load', function() {
-	var CANVAS_SIZE = 480;
+	var CANVAS_SIZE = 1080;
 	app = {
 		algebra: {  // matrices look transposed in code, we index column, then row
 			matMul: function(a, b, c) {
@@ -96,7 +96,7 @@ addEventListener('load', function() {
 				axisColor: [0, 150, 50, 1],
 				gridColor: [120, 120, 120, 1],
 				gridCoordinateColor: [0, 50, 0, 1],
-				font: '16px sans-serif',
+				font: '24px sans-serif',
 			},
 			project: function(pos, result) {
 				result = app.camera.project(pos, result);
@@ -141,7 +141,7 @@ addEventListener('load', function() {
 					ctx.fillStyle = 'rgba(' + style.pointColor + ')';
 					ctx.beginPath();
 					var pos = projectFn(this.pos);
-					var r = style.lineWidth * 4;
+					var r = style.lineWidth * 2.5;
 					ctx.ellipse(pos[0], pos[1], r, r, 0, 0, 6.29);
 					ctx.fill();
 				}
@@ -232,7 +232,7 @@ addEventListener('load', function() {
 						if (zero[i] < bounds[0][i])
 							zero[i] = bounds[0][i];
 						if (zero[i] > bounds[1][i])
-							zero[i] = bounds[0][i];
+							zero[i] = bounds[1][i];
 					}
 					for (var i = 0; i < 2; ++i) {
 						var curr = firstPos[i];
@@ -240,7 +240,7 @@ addEventListener('load', function() {
 						while (curr <= bounds[1][i]) {
 							pos[i] = curr;
 							projectFn(pos, ctxPos);
-							ctx.fillText(curr, ctxPos[0], ctxPos[1]);
+							ctx.fillText(curr, ctxPos[0] - 0.05 / resolution, ctxPos[1] + 0.075 / resolution);
 							curr += cellSize;
 						}
 					}
