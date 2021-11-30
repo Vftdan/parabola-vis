@@ -93,6 +93,10 @@ addEventListener('load', function() {
 				bgColor: [255, 255, 255, 1],
 				pointColor: [0, 0, 0, 1],
 				plotColor: [0, 0, 255, 1],
+				axisColor: [0, 150, 50, 1],
+				gridColor: [120, 120, 120, 1],
+				gridCoordinateColor: [0, 50, 0, 1],
+				font: '16px sans-serif',
 			},
 			project: function(pos, result) {
 				result = app.camera.project(pos, result);
@@ -173,9 +177,80 @@ addEventListener('load', function() {
 				}
 			};
 
+			var CoordinateGrid = function(cellSize) {
+				this.cellSize = cellSize;
+			};
+			CoordinateGrid.prototype = {
+				drawAt: function(ctx, projectFn, bounds, resolution, style) {
+					ctx.strokeStyle = 'rgba(' + style.gridColor + ')';
+					ctx.lineWidth = style.lineWidth / 2;
+					ctx.beginPath();
+					var firstPos = [];
+					var cellSize = this.cellSize;
+					for (var i = 0; i < 2; ++i) {
+						var x = bounds[0][i];
+						firstPos.push(Math.floor(x / cellSize) * cellSize);
+					}
+					var ctxPos = [0, 0];
+					for (var i = 0; i < 2; ++i) {
+						var pos1 = bounds[0].slice(0);
+						var pos2 = bounds[1].slice(0);
+						var curr = firstPos[i];
+						while (curr <= bounds[1][i]) {
+							pos1[i] = curr;
+							pos2[i] = curr;
+							projectFn(pos1, ctxPos);
+							ctx.moveTo(ctxPos[0], ctxPos[1]);
+							projectFn(pos2, ctxPos);
+							ctx.lineTo(ctxPos[0], ctxPos[1]);
+							curr += cellSize;
+						}
+					}
+					ctx.stroke();
+
+					ctx.beginPath();
+					ctx.strokeStyle = 'rgba(' + style.axisColor + ')';
+					ctx.lineWidth = style.lineWidth * 1.5;
+					for (var i = 0; i < 2; ++i) {
+						var pos1 = bounds[0].slice(0);
+						var pos2 = bounds[1].slice(0);
+						pos1[i] = 0;
+						pos2[i] = 0;
+						projectFn(pos1, ctxPos);
+						ctx.moveTo(ctxPos[0], ctxPos[1]);
+						projectFn(pos2, ctxPos);
+						ctx.lineTo(ctxPos[0], ctxPos[1]);
+					}
+					ctx.stroke();
+
+					ctx.fillStyle = 'rgba(' + style.gridCoordinateColor + ')';
+					ctx.textAlign = 'right';
+					ctx.textBaseline = 'top';
+					ctx.font = style.font;
+					var zero = [0, 0];
+					for (var i = 0; i < 2; ++i) {
+						if (zero[i] < bounds[0][i])
+							zero[i] = bounds[0][i];
+						if (zero[i] > bounds[1][i])
+							zero[i] = bounds[0][i];
+					}
+					for (var i = 0; i < 2; ++i) {
+						var curr = firstPos[i];
+						var pos = zero.slice(0);
+						while (curr <= bounds[1][i]) {
+							pos[i] = curr;
+							projectFn(pos, ctxPos);
+							ctx.fillText(curr, ctxPos[0], ctxPos[1]);
+							curr += cellSize;
+						}
+					}
+				}
+			};
+
 			return {
 				Point: Point,
 				Parabola: Parabola,
+				CoordinateGrid: CoordinateGrid,
 			};
 		})(),
 		scene: {
@@ -287,5 +362,6 @@ addEventListener('load', function() {
 	app.drawing.ctx = app.canvas.getContext('2d');
 	document.getElementById('deploy').appendChild(app.canvas);
 	app.canvas.addEventListener('click', app.ui._clickHandler, false);
+	app.scene._elements.push(new app.shapes.CoordinateGrid(1));
 	app.drawing.drawScene();
 }, false);
